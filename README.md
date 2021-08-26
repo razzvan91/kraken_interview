@@ -1,1 +1,0 @@
-# kraken interview Razvan Armeanu
