@@ -1,0 +1,68 @@
+#problem 2
+#Documantation consulted is mainly from kubernetes documentation
+#https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ltcpv
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 3Gi
+  hostPath:
+    path: /data/ltcpv/
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ltcpvc
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ltc
+spec:
+  selector:
+    matchLabels:
+      app: ltc
+  serviceName: "ltcsrv"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: ltc
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: ltc
+          image: ltc:stable
+          imagePullPolicy: Never
+          resources:
+#            Limits
+            limits:
+              cpu: "125m"
+              memory: "64Mi"
+          volumeMounts:
+            - name: ltcps
+              mountPath: /var/ltcps
+  volumeClaimTemplates:
+    - metadata:
+        name: ltcps
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "standard"
+        resources:
+          requests:
+            storage: 3Gi

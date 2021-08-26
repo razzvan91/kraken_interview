@@ -1,0 +1,39 @@
+#problem 3
+
+#Inspiration https://blog.travis-ci.com/2017-10-26-running-kubernetes-on-travis-ci-with-minikube
+#Code example and copy/adaptation: https://github.com/lilic/travis-minikube/blob/master/.travis.yml
+language: generic
+sudo: required
+env:
+  global:
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - MINIKUBE_WANTUPDATENOTIFICATION=false
+    - MINIKUBE_WANTREPORTERRORPROMPT=false
+    - MINIKUBE_HOME=$HOME
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - KUBECONFIG=$HOME/.kube/config
+services:
+  - docker
+before_install:
+#reason for installing conntrack: X Exiting due to GUEST_MISSING_CONNTRACK: Sorry, Kubernetes 1.20.1 requires conntrack to be installed in root's path
+#The command "sudo minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.20.1" failed and exited with 86 during .
+  - sudo apt-get -y install conntrack
+before_script:
+  # Download kubectl.
+  - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.20.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+  # Download minikube.
+  - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.16.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  - mkdir -p $HOME/.kube $HOME/.minikube
+  - touch $KUBECONFIG
+  - sudo minikube start --profile=minikube --vm-driver=none --kubernetes-version=v1.20.1
+  - minikube update-context --profile=minikube
+#  To reuse the Docker daemon from Minikube we need to do: eval $(minikube docker-env) in order to use an image without uploading it to an artifactory
+  - eval "$(minikube docker-env --profile=minikube)"
+  - docker build dockerimage -t ltc:stable
+script:
+  - kubectl cluster-info
+  - kubectl apply -f k8s
+  - kubectl rollout status sts/ltc
+  - kubectl get pods -A
+after_success:
+  - echo "Thank you for bearing with me. This was an awesome assignment. Had fun doing it! All the best, Raz"
